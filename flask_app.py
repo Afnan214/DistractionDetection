@@ -65,42 +65,47 @@ def detect_gazes(frame):
 
 
 def async_frame_processing():
-    """Background thread for frame processing."""
-    global pose_estimator
-    while True:
-        frame = input_queue.get()
-        if frame is None:  # Stop the thread
-            break
+    try:
+        """Background thread for frame processing."""
+        global pose_estimator
+        while True:
+            frame = input_queue.get()
+            if frame is None:  # Stop the thread
+                break
 
-        if pose_estimator is None:
-            pose_estimator = PoseEstimator(frame.shape[1], frame.shape[0])
+            if pose_estimator is None:
+                pose_estimator = PoseEstimator(frame.shape[1], frame.shape[0])
 
-        # Run face detection
-        faces, _ = face_detector.detect(frame, 0.7)
-        combined_distraction = False
+            # Run face detection
+            faces, _ = face_detector.detect(frame, 0.7)
+            combined_distraction = False
 
-        if len(faces) > 0:
-            face = refine(faces, frame.shape[1], frame.shape[0], 0.15)[0]
-            x1, y1, x2, y2 = face[:4].astype(int)
-            patch = frame[y1:y2, x1:x2]
-            marks = mark_detector.detect([patch])[0].reshape([68, 2])
-            marks *= (x2 - x1)
-            marks[:, 0] += x1
-            marks[:, 1] += y1
+            if len(faces) > 0:
+                face = refine(faces, frame.shape[1], frame.shape[0], 0.15)[0]
+                x1, y1, x2, y2 = face[:4].astype(int)
+                patch = frame[y1:y2, x1:x2]
+                marks = mark_detector.detect([patch])[0].reshape([68, 2])
+                marks *= (x2 - x1)
+                marks[:, 0] += x1
+                marks[:, 1] += y1
 
-            # Pose estimation
-            head_distraction, _ = pose_estimator.detect_distraction(marks)
+                # Pose estimation
+                head_distraction, _ = pose_estimator.detect_distraction(marks)
 
-            # Gaze detection
-            gazes = detect_gazes(frame)
-            eye_distraction = False
-            if gazes:
-                for gaze in gazes:
-                    eye_distraction = check_for_distraction(gaze)
+                # Gaze detection
+                # gazes = detect_gazes(frame)
+                eye_distraction = False
+                # if gazes:
+                #     for gaze in gazes:
+                #         eye_distraction = check_for_distraction(gaze)
 
-            combined_distraction = head_distraction or eye_distraction
-
-        output_queue.put(combined_distraction)
+                combined_distraction = head_distraction or eye_distraction
+            else:
+                combined_distraction(True)
+            output_queue.put(combined_distraction)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 
 
 @app.route("/process_frame", methods=["POST"])
@@ -123,6 +128,11 @@ def process_frame():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# Health Check Endpoint
+@app.route("/health", methods=["GET"])
+def health():
+    return "OK", 200
 
 # Start the async thread
 thread = threading.Thread(target=async_frame_processing)

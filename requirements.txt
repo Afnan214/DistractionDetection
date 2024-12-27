@@ -49,5 +49,6 @@ typing_extensions
 tzdata
 urllib3
 watchdog
+gunicorn
 flask
 flask-cors

@@ -1,0 +1,28 @@
+# Exclude the virtual environment folder
+venv/
+dvenv/
+
+# Exclude Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Exclude editor/IDE configuration files
+.vscode/
+.idea/
+*.swp
+
+# Exclude git configuration
+.git/
+.gitignore
+
+# Exclude assets not needed in the container (if applicable)
+assets/*.onnx
+assets/model.txt
+
+# Exclude logs
+*.log
+
+# Exclude other unnecessary files
+.DS_Store
+*.tmp
